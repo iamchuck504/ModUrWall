@@ -3,74 +3,539 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MODUrWALL by iamchuck504</title>
+    <title>ModUrWall - AI Background Defense</title>
     <style>
-        
-        *{
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        body{
-            background-color: #D2D2D2;
-            background-image:
-            repeating-linear-gradient(
-                to right, transparent 0 100px,
-                #25283b22 100px 101px
-            ),
-            repeating-linear-gradient(
-                to bottom, transparent 0 100px,
-                #25283b22 100px 101px
-            );
+
+        :root {
+            --bg: #0a0e1a;
+            --fg: #e0e8ff;
+            --accent: #0088ff;
+            --dim: #4a5a7a;
+            --darker: #050810;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg);
+            color: var(--fg);
+            line-height: 1.6;
+            padding: 2rem;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
         }
         
-        body::before{
+        /* WALLPAPER CONSTELLATION - Work Nodes */
+        .wallpaper-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none; /* Allow clicks to pass through */
+        }
+        
+        #wallpaper-canvas {
+            width: 100%;
+            height: 100%;
+            pointer-events: auto; /* Canvas receives clicks */
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            flex: 1;
+            position: relative;
+            z-index: 1;
+            pointer-events: none; /* Content doesn't block canvas clicks */
+        }
+        
+        .container > * {
+            pointer-events: auto; /* But content itself is clickable */
+        }
+
+        header {
+            margin-bottom: 4rem;
+            border-bottom: 1px solid var(--dim);
+            padding-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 300;
+            letter-spacing: -2px;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        .tagline {
+            color: var(--dim);
+            font-size: 1.1rem;
+        }
+
+        .hero {
+            margin-bottom: 4rem;
+        }
+
+        .hero-text {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            line-height: 1.8;
+        }
+
+        .shield-concept {
+            background: var(--darker);
+            border: 1px solid var(--dim);
+            padding: 2rem;
+            margin-bottom: 4rem;
+            border-left: 3px solid var(--accent);
+        }
+
+        .shield-concept h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+            color: var(--accent);
+        }
+
+        .shield-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .stat {
+            color: var(--dim);
+        }
+
+        .stat-value {
+            color: var(--accent);
+            font-size: 1.2rem;
+            display: block;
+            margin-bottom: 0.3rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .feature {
+            border: 1px solid var(--dim);
+            padding: 2rem;
+            transition: all 0.3s;
+            background: var(--darker);
+        }
+
+        .feature:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(0, 136, 255, 0.1);
+        }
+
+        .feature-icon {
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+            color: var(--fg);
+        }
+
+        .feature-desc {
+            color: var(--dim);
+            font-size: 0.95rem;
+        }
+
+        .wall-display {
+            background: var(--darker);
+            border: 1px solid var(--accent);
+            padding: 3rem 2rem;
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .wall-display h2 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 300;
+        }
+
+        .wall-preview {
+            background: var(--bg);
+            border: 2px solid var(--dim);
+            padding: 4rem 2rem;
+            margin: 2rem auto;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .wall-preview::before {
+            content: "[ your device screen ]";
             position: absolute;
-            width: min(1400px, 90vw);
-            top: 10%;
+            top: 1rem;
             left: 50%;
-            height: 90%;
             transform: translateX(-50%);
-            content: '';
-            background-image: url(images/bg.png);
-            background-size: 100%;
-            background-repeat: no-repeat;
-            background-position: top center;
-            pointer-events: none;
+            color: var(--dim);
+            font-size: 0.8rem;
+        }
+
+        .preview-text {
+            color: var(--dim);
+            font-size: 1.1rem;
+        }
+
+        .cta {
+            text-align: center;
+            margin: 4rem 0;
+        }
+
+        .cta-text {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            padding: 1rem 3rem;
+            text-decoration: none;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
+        }
+
+        .cta-button:hover {
+            background: var(--accent);
+            color: var(--bg);
+            box-shadow: 0 0 30px rgba(0, 136, 255, 0.3);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--dim);
+            margin-top: 4rem;
+        }
+
+        .powered {
+            color: var(--dim);
+            font-size: 0.9rem;
+        }
+
+        .powered a {
+            color: var(--fg);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .powered a:hover {
+            color: var(--accent);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .hero-text {
+                font-size: 1.1rem;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .shield-stats {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div class="banner">
-        <div class="slider" style="--quantity: 10">
-            <div class="item" style="--position: 1"><img src="images/dragon_1.jpg" alt=""></div>
-            <div class="item" style="--position: 2"><img src="images/dragon_2.jpg" alt=""></div>
-            <div class="item" style="--position: 3"><img src="images/dragon_3.jpg" alt=""></div>
-            <div class="item" style="--position: 4"><img src="images/dragon_4.jpg" alt=""></div>
-            <div class="item" style="--position: 5"><img src="images/dragon_5.jpg" alt=""></div>
-            <div class="item" style="--position: 6"><img src="images/dragon_6.jpg" alt=""></div>
-            <div class="item" style="--position: 7"><img src="images/dragon_7.jpg" alt=""></div>
-            <div class="item" style="--position: 8"><img src="images/dragon_8.jpg" alt=""></div>
-            <div class="item" style="--position: 9"><img src="images/dragon_9.jpg" alt=""></div>
-            <div class="item" style="--position: 10"><img src="images/dragon_10.jpg" alt=""></div>
-        </div>
-        <div class="content">
-            <h1 data-content="CSS ONLY">
-                App Idea by iamchuck504
-            </h1>
-            <div class="author">
-                <h2>CREDITS</h2>
-
-                <p><b>Web Design by Lunλ Dev, current css is just a placeholder. </b></p>
-                <p>
-                    implementations and AI by Lempyrλ
-                </p>
-            </div>
-            <div class="model"></div>
-        </div>
+    <div class="wallpaper-background">
+        <canvas id="wallpaper-canvas"></canvas>
     </div>
     
+    <div class="container">
+        <header>
+            <h1>ModUrWall</h1>
+            <p class="tagline">defense through design / AI-generated backgrounds</p>
+        </header>
+
+        <section class="hero">
+            <p class="hero-text">
+                your device screen is your first line of defense.
+                make it beautiful. make it yours. make it impenetrable.
+                walls that adapt. shields that evolve.
+            </p>
+        </section>
+
+        <section class="shield-concept">
+            <h2>shield philosophy</h2>
+            <p style="color: var(--dim); margin-bottom: 1rem;">
+                a shield doesn't attack—it protects. it must be faster than bullets, 
+                stronger than swords. your background is your digital shield.
+            </p>
+            <div class="shield-stats">
+                <div class="stat">
+                    <span class="stat-value">faster</span>
+                    instant generation
+                </div>
+                <div class="stat">
+                    <span class="stat-value">stronger</span>
+                    unique to you
+                </div>
+                <div class="stat">
+                    <span class="stat-value">adaptive</span>
+                    evolves on demand
+                </div>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature">
+                <div class="feature-icon">◢</div>
+                <h3 class="feature-title">device native</h3>
+                <p class="feature-desc">
+                    generated for your exact screen resolution.
+                    phone, tablet, desktop—perfectly fitted shields.
+                </p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">◣</div>
+                <h3 class="feature-title">AI-crafted</h3>
+                <p class="feature-desc">
+                    describe your vision. receive your wall.
+                    no two backgrounds identical. yours alone.
+                </p>
+            </div>
+
+            <div class="feature">
+                <div class="feature-icon">◥</div>
+                <h3 class="feature-title">instant deploy</h3>
+                <p class="feature-desc">
+                    request → generate → download → set.
+                    your new shield in seconds, not hours.
+                </p>
+            </div>
+        </section>
+
+        <section class="wall-display">
+            <h2>fortify your screen</h2>
+            <div class="wall-preview">
+                <p class="preview-text">
+                    → this space becomes your canvas<br>
+                    → AI renders your defense<br>
+                    → you deploy instantly<br>
+                </p>
+            </div>
+            <p style="color: var(--dim); margin-top: 1rem;">
+                every background generated is a unique artifact.
+                your digital territory, visually defended.
+            </p>
+        </section>
+
+        <section class="cta">
+            <p class="cta-text">ready to build your wall?</p>
+            <a href="#" class="cta-button">generate shield</a>
+        </section>
+    </div>
+
+    <footer>
+        <p class="powered">powered by <a href="https://lempyra.com">Lempyrλ</a></p>
+    </footer>
+    
+    <script>
+        // MODURWALL SQUARE GRID - Pixel Ripple Effect
+        const canvas = document.getElementById('wallpaper-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let squares = [];
+        const squareSize = 50;
+        const gap = 5;
+        
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            initSquares();
+        }
+        
+        class Square {
+            constructor(x, y, col, row) {
+                this.x = x;
+                this.y = y;
+                this.col = col;
+                this.row = row;
+                this.size = squareSize;
+                this.baseColor = '#0a0e1a'; // Dark blue background
+                this.currentColor = this.baseColor;
+                this.scale = 1;
+                this.brightness = 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x + this.size/2, this.y + this.size/2);
+                ctx.scale(this.scale, this.scale);
+                
+                // Draw square
+                ctx.fillStyle = this.currentColor;
+                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                // Border with RGB glow when wave passes
+                const borderColor = this.brightness > 0 ? this.currentColor : '#0088ff';
+                ctx.strokeStyle = borderColor;
+                ctx.lineWidth = this.brightness > 0 ? 2 + this.brightness : 1;
+                
+                // Glow effect when lifted
+                if (this.brightness > 0) {
+                    ctx.shadowBlur = 10 * this.brightness;
+                    ctx.shadowColor = this.currentColor;
+                }
+                
+                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                ctx.restore();
+            }
+        }
+        
+        function initSquares() {
+            squares = [];
+            const cols = Math.ceil(canvas.width / (squareSize + gap));
+            const rows = Math.ceil(canvas.height / (squareSize + gap));
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = col * (squareSize + gap);
+                    const y = row * (squareSize + gap);
+                    squares.push(new Square(x, y, col, row));
+                }
+            }
+        }
+        
+        function createRipple(clickX, clickY) {
+            const clickCol = Math.floor(clickX / (squareSize + gap));
+            const clickRow = Math.floor(clickY / (squareSize + gap));
+            
+            // RGB color palette
+            const colorPalette = [
+                '#ff0000', '#00ff00', '#0000ff', 
+                '#ffff00', '#00ffff', '#ff00ff',
+                '#ff8800', '#88ff00', '#0088ff',
+                '#ff0088', '#8800ff', '#00ff88'
+            ];
+            
+            squares.forEach(square => {
+                const distance = Math.sqrt(
+                    Math.pow(square.col - clickCol, 2) + 
+                    Math.pow(square.row - clickRow, 2)
+                );
+                
+                // Each square gets RANDOM color
+                const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+                
+                setTimeout(() => {
+                    // MULTICOLOR WAVE: each square different color
+                    square.currentColor = randomColor;
+                    square.scale = 1.3; // Lift up
+                    square.brightness = 1;
+                    
+                    setTimeout(() => {
+                        // Wave passes
+                        square.currentColor = square.baseColor;
+                        square.scale = 1;
+                        square.brightness = 0;
+                    }, 600);
+                }, distance * 50);
+            });
+        }
+        
+        // AUTO WAVE like Lempyra index
+        function createAutoWave() {
+            const cols = Math.ceil(canvas.width / (squareSize + gap));
+            const rows = Math.ceil(canvas.height / (squareSize + gap));
+            const startCol = Math.floor(Math.random() * cols);
+            const startRow = Math.floor(Math.random() * rows);
+            
+            // Random RGB color for auto wave
+            const colorPalette = [
+                '#ff0000', '#00ff00', '#0000ff', 
+                '#ffff00', '#00ffff', '#ff00ff'
+            ];
+            const waveColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+            
+            squares.forEach(square => {
+                const distance = Math.sqrt(
+                    Math.pow(square.col - startCol, 2) + 
+                    Math.pow(square.row - startRow, 2)
+                );
+                
+                setTimeout(() => {
+                    // Subtle auto wave
+                    square.currentColor = waveColor;
+                    square.scale = 1.15; // Smaller lift for auto
+                    square.brightness = 0.6;
+                    
+                    setTimeout(() => {
+                        square.currentColor = square.baseColor;
+                        square.scale = 1;
+                        square.brightness = 0;
+                    }, 600);
+                }, distance * 50);
+            });
+        }
+        
+        function scheduleNextWave() {
+            const interval = 3000 + Math.random() * 4000; // 3-7 seconds
+            setTimeout(() => {
+                createAutoWave();
+                scheduleNextWave();
+            }, interval);
+        }
+        
+        function animate() {
+            ctx.fillStyle = '#0a0e1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            squares.forEach(square => {
+                square.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        canvas.addEventListener('click', (e) => {
+            createRipple(e.clientX, e.clientY);
+        });
+        
+        window.addEventListener('resize', resizeCanvas);
+        
+        resizeCanvas();
+        animate();
+        
+        // Start auto wave pulsing like Lempyra
+        scheduleNextWave();
+        createAutoWave(); // Initial wave
+    </script>
 </body>
 </html>
