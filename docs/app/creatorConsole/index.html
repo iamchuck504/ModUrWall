@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModUrWall - Creator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #0a0e1a;
+            --fg: #e0e8ff;
+            --accent: #0088ff;
+            --dim: #4a5a7a;
+            --darker: #050810;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: var(--bg);
+            color: var(--fg);
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+        
+        /* WALLPAPER CONSTELLATION - Square Grid Background */
+        .wallpaper-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        #wallpaper-canvas {
+            width: 100%;
+            height: 100%;
+            pointer-events: auto;
+        }
+
+        #main-container {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top 2/3 - Image Display */
+        #image-display {
+            flex: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(5, 8, 16, 0.8);
+            border-bottom: 3px solid var(--accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #display-image {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border: 2px solid var(--dim);
+            box-shadow: 0 0 30px var(--accent);
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+
+        #display-image.loaded {
+            opacity: 1;
+        }
+
+        #image-placeholder {
+            position: absolute;
+            color: var(--dim);
+            font-size: 1.5rem;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        /* Bottom 1/3 - Control Squares */
+        #control-panel {
+            flex: 1;
+            display: flex;
+            gap: 0;
+        }
+
+        .control-square {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--dim);
+            background: rgba(5, 8, 16, 0.6);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-square:hover {
+            background: var(--darker);
+            border-color: var(--accent);
+            transform: scale(1.02);
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        .control-square:active {
+            background: var(--accent);
+            color: var(--bg);
+            transform: scale(0.98);
+        }
+
+        .control-square.active {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent);
+        }
+
+        .control-label {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+        }
+
+        .control-value {
+            font-size: 1rem;
+            color: var(--dim);
+            transition: all 0.3s;
+        }
+
+        .control-square:active .control-value,
+        .control-square.active .control-value {
+            color: var(--bg);
+        }
+
+        /* Ripple effect on click */
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: var(--accent);
+            opacity: 0.6;
+            transform: scale(0);
+            animation: ripple-animation 0.6s ease-out;
+            pointer-events: none;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        /* Loading indicator */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--dim);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .control-label {
+                font-size: 1.5rem;
+            }
+            
+            .control-value {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Animated Square Grid Background -->
+    <div class="wallpaper-background">
+        <canvas id="wallpaper-canvas"></canvas>
+    </div>
+
+    <div id="main-container">
+        <!-- Top 2/3 - Image Display -->
+        <div id="image-display">
+            <div id="image-placeholder">
+                [ awaiting creation ]
+            </div>
+            <img id="display-image" src="" alt="Generated wallpaper">
+            <div id="loading-indicator" class="loading" style="display: none;"></div>
+        </div>
+
+        <!-- Bottom 1/3 - Control Panel -->
+        <div id="control-panel">
+            <div class="control-square" id="genre-square" data-type="genre">
+                <div class="control-label">GENRE</div>
+                <div class="control-value">—</div>
+            </div>
+            <div class="control-square" id="style-square" data-type="style">
+                <div class="control-label">STYLE</div>
+                <div class="control-value">—</div>
+            </div>
+            <div class="control-square" id="flow-square" data-type="flow">
+                <div class="control-label">FLOW</div>
+                <div class="control-value">—</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== ANIMATED SQUARE GRID BACKGROUND ==========
+        const bgCanvas = document.getElementById('wallpaper-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        
+        let squares = [];
+        const squareSize = 50;
+        const gap = 5;
+        
+        function resizeCanvas() {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+            initSquares();
+        }
+        
+        class Square {
+            constructor(x, y, col, row) {
+                this.x = x;
+                this.y = y;
+                this.col = col;
+                this.row = row;
+                this.size = squareSize;
+                this.baseColor = '#0a0e1a';
+                this.currentColor = this.baseColor;
+                this.scale = 1;
+                this.brightness = 0;
+            }
+            
+            draw() {
+                bgCtx.save();
+                bgCtx.translate(this.x + this.size/2, this.y + this.size/2);
+                bgCtx.scale(this.scale, this.scale);
+                
+                bgCtx.fillStyle = this.currentColor;
+                bgCtx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                const borderColor = this.brightness > 0 ? this.currentColor : '#0088ff';
+                bgCtx.strokeStyle = borderColor;
+                bgCtx.lineWidth = this.brightness > 0 ? 2 + this.brightness : 1;
+                
+                if (this.brightness > 0) {
+                    bgCtx.shadowBlur = 10 * this.brightness;
+                    bgCtx.shadowColor = this.currentColor;
+                }
+                
+                bgCtx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
+                
+                bgCtx.restore();
+            }
+        }
+        
+        function initSquares() {
+            squares = [];
+            const cols = Math.ceil(bgCanvas.width / (squareSize + gap));
+            const rows = Math.ceil(bgCanvas.height / (squareSize + gap));
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const x = col * (squareSize + gap);
+                    const y = row * (squareSize + gap);
+                    squares.push(new Square(x, y, col, row));
+                }
+            }
+        }
+        
+        function createRipple(clickX, clickY) {
+            const clickCol = Math.floor(clickX / (squareSize + gap));
+            const clickRow = Math.floor(clickY / (squareSize + gap));
+            
+            const colorPalette = [
+                '#ff0000', '#00ff00', '#0000ff', 
+                '#ffff00', '#00ffff', '#ff00ff',
+                '#ff8800', '#88ff00', '#0088ff',
+                '#ff0088', '#8800ff', '#00ff88'
+            ];
+            
+            squares.forEach(square => {
+                const distance = Math.sqrt(
+                    Math.pow(square.col - clickCol, 2) + 
+                    Math.pow(square.row - clickRow, 2)
+                );
+                
+                const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+                
+                setTimeout(() => {
+                    square.currentColor = randomColor;
+                    square.scale = 1.3;
+                    square.brightness = 1;
+                    
+                    setTimeout(() => {
+                        square.currentColor = square.baseColor;
+                        square.scale = 1;
+                        square.brightness = 0;
+                    }, 600);
+                }, distance * 50);
+            });
+        }
+        
+        function createAutoWave() {
+            const cols = Math.ceil(bgCanvas.width / (squareSize + gap));
+            const rows = Math.ceil(bgCanvas.height / (squareSize + gap));
+            const startCol = Math.floor(Math.random() * cols);
+            const startRow = Math.floor(Math.random() * rows);
+            
+            const colorPalette = [
+                '#ff0000', '#00ff00', '#0000ff', 
+                '#ffff00', '#00ffff', '#ff00ff'
+            ];
+            const waveColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+            
+            squares.forEach(square => {
+                const distance = Math.sqrt(
+                    Math.pow(square.col - startCol, 2) + 
+                    Math.pow(square.row - startRow, 2)
+                );
+                
+                setTimeout(() => {
+                    square.currentColor = waveColor;
+                    square.scale = 1.15;
+                    square.brightness = 0.6;
+                    
+                    setTimeout(() => {
+                        square.currentColor = square.baseColor;
+                        square.scale = 1;
+                        square.brightness = 0;
+                    }, 600);
+                }, distance * 50);
+            });
+        }
+        
+        function scheduleNextWave() {
+            const interval = 3000 + Math.random() * 4000;
+            setTimeout(() => {
+                createAutoWave();
+                scheduleNextWave();
+            }, interval);
+        }
+        
+        function animate() {
+            bgCtx.fillStyle = '#0a0e1a';
+            bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+            
+            squares.forEach(square => {
+                square.draw();
+            });
+            
+            requestAnimationFrame(animate);
+        }
+        
+        bgCanvas.addEventListener('click', (e) => {
+            createRipple(e.clientX, e.clientY);
+        });
+        
+        window.addEventListener('resize', resizeCanvas);
+
+        // ========== CREATOR CONTROLS ==========
+        const controlSquares = document.querySelectorAll('.control-square');
+        const displayImage = document.getElementById('display-image');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        const loadingIndicator = document.getElementById('loading-indicator');
+
+        // Options for each control type
+        const options = {
+            genre: ['abstract', 'nature', 'cyberpunk', 'minimal', 'cosmic', 'urban'],
+            style: ['geometric', 'organic', 'glitch', 'gradient', 'fractal', 'neon'],
+            flow: ['smooth', 'chaotic', 'rhythmic', 'static', 'dynamic', 'pulse']
+        };
+
+        const selectedOptions = {
+            genre: null,
+            style: null,
+            flow: null
+        };
+
+        // Cache for media files
+        let mediaFiles = [];
+
+        // Fetch available media files from /modurwall/media/
+        async function loadMediaFiles() {
+            try {
+                // Try to fetch directory listing
+                const response = await fetch('../../media/');
+                const html = await response.text();
+                
+                // Parse HTML to extract image filenames
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const links = doc.querySelectorAll('a');
+                
+                mediaFiles = Array.from(links)
+                    .map(link => link.getAttribute('href'))
+                    .filter(href => href && /\.(jpg|jpeg|png|gif|webp)$/i.test(href));
+                
+                console.log('Media files loaded:', mediaFiles);
+            } catch (error) {
+                console.warn('Could not load media directory listing:', error);
+                
+                // Fallback: Try common image names
+                mediaFiles = [
+                    'wallpaper_001.jpg',
+                    'wallpaper_002.jpg', 
+                    'wallpaper_003.jpg',
+                    'wallpaper_004.jpg',
+                    'wallpaper_005.jpg',
+                    'image_001.png',
+                    'image_002.png',
+                    'abstract_001.jpg',
+                    'nature_001.jpg',
+                    'cyber_001.png'
+                ];
+            }
+        }
+
+        // Create ripple effect
+        function createControlRipple(element, x, y) {
+            const ripple = document.createElement('div');
+            ripple.className = 'ripple';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+            ripple.style.width = '20px';
+            ripple.style.height = '20px';
+            element.appendChild(ripple);
+            
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        // Handle control square clicks
+        controlSquares.forEach(square => {
+            square.addEventListener('click', (e) => {
+                const rect = square.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                createControlRipple(square, x, y);
+                
+                const type = square.dataset.type;
+                const optionsList = options[type];
+                const randomOption = optionsList[Math.floor(Math.random() * optionsList.length)];
+                
+                selectedOptions[type] = randomOption;
+                
+                // Update display
+                const valueElement = square.querySelector('.control-value');
+                valueElement.textContent = randomOption;
+                
+                // Add active state briefly
+                square.classList.add('active');
+                setTimeout(() => square.classList.remove('active'), 300);
+                
+                // Check if all options selected
+                if (selectedOptions.genre && selectedOptions.style && selectedOptions.flow) {
+                    loadRandomImage();
+                }
+            });
+        });
+
+        // Load random image from media folder
+        async function loadRandomImage() {
+            // Show loading
+            loadingIndicator.style.display = 'block';
+            imagePlaceholder.style.display = 'none';
+            displayImage.classList.remove('loaded');
+            displayImage.src = '';
+            
+            // Ensure media files are loaded
+            if (mediaFiles.length === 0) {
+                await loadMediaFiles();
+            }
+            
+            // Pick random image
+            if (mediaFiles.length > 0) {
+                const randomIndex = Math.floor(Math.random() * mediaFiles.length);
+                const randomImage = mediaFiles[randomIndex];
+                const imageUrl = `../../media/${randomImage}`;
+                
+                console.log('Loading image:', imageUrl);
+                
+                displayImage.src = imageUrl;
+                displayImage.onerror = () => {
+                    console.error('Failed to load image:', imageUrl);
+                    loadingIndicator.style.display = 'none';
+                    imagePlaceholder.textContent = '[ image not found ]';
+                    imagePlaceholder.style.display = 'block';
+                };
+                displayImage.onload = () => {
+                    loadingIndicator.style.display = 'none';
+                    displayImage.classList.add('loaded');
+                };
+            } else {
+                // No images available, use placeholder
+                loadingIndicator.style.display = 'none';
+                const seed = `${selectedOptions.genre}-${selectedOptions.style}-${selectedOptions.flow}`;
+                displayImage.src = `https://placehold.co/1920x1080/0a0e1a/0088ff?text=${encodeURIComponent(seed)}`;
+                displayImage.onload = () => {
+                    displayImage.classList.add('loaded');
+                };
+            }
+        }
+
+        // Initialize
+        resizeCanvas();
+        animate();
+        scheduleNextWave();
+        createAutoWave();
+        loadMediaFiles(); // Pre-load media files on page load
+    </script>
+</body>
+</html>
