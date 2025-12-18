@@ -72,11 +72,24 @@
             border: 2px solid var(--dim);
             box-shadow: 0 0 30px var(--accent);
             opacity: 0;
-            transition: opacity 0.5s;
+            transition: opacity 0.5s, transform 0.5s;
+            transform: rotate(0deg);
         }
 
         #display-image.loaded {
             opacity: 1;
+        }
+
+        #display-image.rotate-90 {
+            transform: rotate(90deg);
+        }
+
+        #display-image.rotate-180 {
+            transform: rotate(180deg);
+        }
+
+        #display-image.rotate-270 {
+            transform: rotate(270deg);
         }
 
         #image-placeholder {
@@ -94,6 +107,13 @@
             gap: 0;
         }
 
+        /* Default: Portrait/Vertical mode - all buttons in one row */
+        .left-controls,
+        .right-controls {
+            display: flex;
+            flex: 1;
+        }
+
         .control-square {
             flex: 1;
             display: flex;
@@ -107,6 +127,36 @@
             transition: all 0.3s;
             position: relative;
             overflow: hidden;
+        }
+
+        /* Landscape/Horizontal mode - buttons split on sides */
+        @media (orientation: landscape) {
+            #main-container {
+                flex-direction: row;
+            }
+
+            #image-display {
+                flex: 2;
+                border-bottom: none;
+                border-left: 3px solid var(--accent);
+                border-right: 3px solid var(--accent);
+            }
+
+            #control-panel {
+                flex-direction: row;
+            }
+
+            .left-controls,
+            .right-controls {
+                flex-direction: column;
+                flex: none;
+                width: 15vw;
+                min-width: 150px;
+            }
+
+            .control-square {
+                flex: 1;
+            }
         }
 
         .control-square:hover {
@@ -216,17 +266,30 @@
 
         <!-- Bottom 1/3 - Control Panel -->
         <div id="control-panel">
-            <div class="control-square" id="genre-square" data-type="genre">
-                <div class="control-label">GENRE</div>
-                <div class="control-value">—</div>
+            <!-- Left Controls (2 buttons) -->
+            <div class="left-controls">
+                <div class="control-square" id="genre-square" data-type="genre">
+                    <div class="control-label">GENRE</div>
+                    <div class="control-value">—</div>
+                </div>
+                <div class="control-square" id="style-square" data-type="style">
+                    <div class="control-label">STYLE</div>
+                    <div class="control-value">—</div>
+                </div>
             </div>
-            <div class="control-square" id="style-square" data-type="style">
-                <div class="control-label">STYLE</div>
-                <div class="control-value">—</div>
-            </div>
-            <div class="control-square" id="flow-square" data-type="flow">
-                <div class="control-label">FLOW</div>
-                <div class="control-value">—</div>
+
+            <!-- Image Display (only visible in horizontal mode) -->
+            
+            <!-- Right Controls (2 buttons) -->
+            <div class="right-controls">
+                <div class="control-square" id="flow-square" data-type="flow">
+                    <div class="control-label">FLOW</div>
+                    <div class="control-value">—</div>
+                </div>
+                <div class="control-square" id="rotate-square" data-type="rotate">
+                    <div class="control-label">ROTATE</div>
+                    <div class="control-value">↻</div>
+                </div>
             </div>
         </div>
     </div>
@@ -405,43 +468,45 @@
             flow: null
         };
 
-        // Cache for media files
-        let mediaFiles = [];
+        let rotationState = 0; // 0, 90, 180, 270
 
-        // Fetch available media files from /modurwall/media/
+        // Hardcoded list of your actual media files
+        let mediaFiles = [
+            'codeGeass.webp',
+            'demonCitySinjuku.webp',
+            'gemini.png',
+            'generated-server0.png',
+            'generated-server1.png',
+            'generated-server2.png',
+            'iamcarlomarcell0.jpg'
+        ];
+
+        // Try to dynamically load media files from directory
         async function loadMediaFiles() {
-            try {
-                // Try to fetch directory listing
-                const response = await fetch('../../media/');
-                const html = await response.text();
-                
-                // Parse HTML to extract image filenames
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const links = doc.querySelectorAll('a');
-                
-                mediaFiles = Array.from(links)
-                    .map(link => link.getAttribute('href'))
-                    .filter(href => href && /\.(jpg|jpeg|png|gif|webp)$/i.test(href));
-                
-                console.log('Media files loaded:', mediaFiles);
-            } catch (error) {
-                console.warn('Could not load media directory listing:', error);
-                
-                // Fallback: Try common image names
-                mediaFiles = [
-                    'wallpaper_001.jpg',
-                    'wallpaper_002.jpg', 
-                    'wallpaper_003.jpg',
-                    'wallpaper_004.jpg',
-                    'wallpaper_005.jpg',
-                    'image_001.png',
-                    'image_002.png',
-                    'abstract_001.jpg',
-                    'nature_001.jpg',
-                    'cyber_001.png'
-                ];
+            const possiblePaths = ['../../media/', './media/', '../media/'];
+            
+            for (const basePath of possiblePaths) {
+                try {
+                    console.log('Trying to load from:', basePath);
+                    
+                    // Try to load a test image to check if path works
+                    const testImage = mediaFiles[0];
+                    const response = await fetch(basePath + testImage, { method: 'HEAD' });
+                    
+                    if (response.ok) {
+                        console.log('Found media at:', basePath);
+                        // Update mediaFiles with correct path prefix
+                        window.mediaBasePath = basePath;
+                        return;
+                    }
+                } catch (error) {
+                    console.log('Path not found:', basePath);
+                }
             }
+            
+            // Default to ../../media/ if nothing works
+            window.mediaBasePath = '../../media/';
+            console.log('Using default path: ../../media/');
         }
 
         // Create ripple effect
@@ -467,6 +532,13 @@
                 createControlRipple(square, x, y);
                 
                 const type = square.dataset.type;
+                
+                // Handle rotate button separately
+                if (type === 'rotate') {
+                    rotateImage();
+                    return;
+                }
+                
                 const optionsList = options[type];
                 const randomOption = optionsList[Math.floor(Math.random() * optionsList.length)];
                 
@@ -487,16 +559,47 @@
             });
         });
 
+        // Rotate image 90 degrees
+        function rotateImage() {
+            if (!displayImage.src || displayImage.src === '') return;
+            
+            rotationState = (rotationState + 90) % 360;
+            
+            // Remove all rotation classes
+            displayImage.classList.remove('rotate-90', 'rotate-180', 'rotate-270');
+            
+            // Add appropriate rotation class
+            if (rotationState === 90) {
+                displayImage.classList.add('rotate-90');
+            } else if (rotationState === 180) {
+                displayImage.classList.add('rotate-180');
+            } else if (rotationState === 270) {
+                displayImage.classList.add('rotate-270');
+            }
+            
+            // Update rotate button icon
+            const rotateButton = document.getElementById('rotate-square');
+            const rotateValue = rotateButton.querySelector('.control-value');
+            const rotateIcons = ['↻', '→', '↓', '←'];
+            rotateValue.textContent = rotateIcons[rotationState / 90];
+        }
+
         // Load random image from media folder
         async function loadRandomImage() {
             // Show loading
             loadingIndicator.style.display = 'block';
             imagePlaceholder.style.display = 'none';
-            displayImage.classList.remove('loaded');
+            displayImage.classList.remove('loaded', 'rotate-90', 'rotate-180', 'rotate-270');
             displayImage.src = '';
+            rotationState = 0; // Reset rotation
             
-            // Ensure media files are loaded
-            if (mediaFiles.length === 0) {
+            // Reset rotate button icon
+            const rotateButton = document.getElementById('rotate-square');
+            const rotateValue = rotateButton.querySelector('.control-value');
+            rotateValue.textContent = '↻';
+            
+            // Ensure media path is detected
+            if (!window.mediaBasePath) {
                 await loadMediaFiles();
             }
             
@@ -504,29 +607,30 @@
             if (mediaFiles.length > 0) {
                 const randomIndex = Math.floor(Math.random() * mediaFiles.length);
                 const randomImage = mediaFiles[randomIndex];
-                const imageUrl = `../../media/${randomImage}`;
+                const imageUrl = window.mediaBasePath + randomImage;
                 
                 console.log('Loading image:', imageUrl);
                 
-                displayImage.src = imageUrl;
-                displayImage.onerror = () => {
+                // Try to load the image
+                const img = new Image();
+                img.onload = () => {
+                    displayImage.src = imageUrl;
+                    loadingIndicator.style.display = 'none';
+                    displayImage.classList.add('loaded');
+                    console.log('Image loaded successfully:', imageUrl);
+                };
+                img.onerror = () => {
                     console.error('Failed to load image:', imageUrl);
                     loadingIndicator.style.display = 'none';
-                    imagePlaceholder.textContent = '[ image not found ]';
+                    imagePlaceholder.textContent = `[ image not found: ${randomImage} ]`;
                     imagePlaceholder.style.display = 'block';
                 };
-                displayImage.onload = () => {
-                    loadingIndicator.style.display = 'none';
-                    displayImage.classList.add('loaded');
-                };
+                img.src = imageUrl;
             } else {
-                // No images available, use placeholder
+                // No images available
                 loadingIndicator.style.display = 'none';
-                const seed = `${selectedOptions.genre}-${selectedOptions.style}-${selectedOptions.flow}`;
-                displayImage.src = `https://placehold.co/1920x1080/0a0e1a/0088ff?text=${encodeURIComponent(seed)}`;
-                displayImage.onload = () => {
-                    displayImage.classList.add('loaded');
-                };
+                imagePlaceholder.textContent = '[ no images in mediaFiles array ]';
+                imagePlaceholder.style.display = 'block';
             }
         }
 
