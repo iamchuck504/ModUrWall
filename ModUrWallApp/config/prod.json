@@ -1,0 +1,5 @@
+{
+  "AUTH_BASE_URL": "https://auth.lempyra.com",
+  "API_BASE_URL":  "https://api.lempyra.com",
+  "MODURWALL_CLIENT_ID": "modurwall"
+}

@@ -1,541 +1,1046 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ModUrWall - AI Background Defense</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ModUrWall — Art Meets AI. Your Screen, Your Canvas.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-card: #111118;
+    --bg-card-hover: #16161f;
+    --accent-cyan: #00e5ff;
+    --accent-magenta: #ff2d78;
+    --accent-gold: #ffd000;
+    --text-primary: #eaeaf0;
+    --text-secondary: #7a7a8e;
+    --text-muted: #4a4a5e;
+    --border: #1e1e2e;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --font-display: 'Outfit', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
 
-        :root {
-            --bg: #0a0e1a;
-            --fg: #e0e8ff;
-            --accent: #0088ff;
-            --dim: #4a5a7a;
-            --darker: #050810;
-        }
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-        body {
-            font-family: 'Courier New', monospace;
-            background: var(--bg);
-            color: var(--fg);
-            line-height: 1.6;
-            padding: 2rem;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        
-        /* WALLPAPER CONSTELLATION - Work Nodes */
-        .wallpaper-background {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            pointer-events: none; /* Allow clicks to pass through */
-        }
-        
-        #wallpaper-canvas {
-            width: 100%;
-            height: 100%;
-            pointer-events: auto; /* Canvas receives clicks */
-        }
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
 
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            flex: 1;
-            position: relative;
-            z-index: 1;
-            pointer-events: none; /* Content doesn't block canvas clicks */
-        }
-        
-        .container > * {
-            pointer-events: auto; /* But content itself is clickable */
-        }
+  /* === AMBIENT BACKGROUND === */
+  .bg-mesh {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  .bg-mesh::before {
+    content: '';
+    position: absolute;
+    width: 900px; height: 900px;
+    top: -300px; left: -200px;
+    background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 55%);
+    animation: drift1 22s ease-in-out infinite;
+  }
+  .bg-mesh::after {
+    content: '';
+    position: absolute;
+    width: 700px; height: 700px;
+    bottom: -150px; right: -150px;
+    background: radial-gradient(circle, rgba(255,45,120,0.05) 0%, transparent 55%);
+    animation: drift2 28s ease-in-out infinite;
+  }
+  .bg-mesh-extra {
+    position: fixed;
+    width: 500px; height: 500px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(255,208,0,0.025) 0%, transparent 60%);
+    animation: drift3 18s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @keyframes drift1 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(100px, 70px); }
+  }
+  @keyframes drift2 {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(-80px, -50px); }
+  }
+  @keyframes drift3 {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50% { transform: translate(-45%, -55%) scale(1.2); }
+  }
 
-        header {
-            margin-bottom: 4rem;
-            border-bottom: 1px solid var(--dim);
-            padding-bottom: 2rem;
-        }
+  .noise-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    opacity: 0.02;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+  }
 
-        h1 {
-            font-size: 3rem;
-            font-weight: 300;
-            letter-spacing: -2px;
-            margin-bottom: 0.5rem;
-            color: var(--accent);
-        }
+  /* === LAYOUT === */
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+  }
 
-        .tagline {
-            color: var(--dim);
-            font-size: 1.1rem;
-        }
+  /* === NAV === */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    margin-bottom: 80px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeDown 0.6s ease-out;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .nav-links {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: color 0.25s;
+  }
+  .nav-links a:hover { color: var(--text-primary); }
+  .nav-cta {
+    color: var(--bg-deep) !important;
+    background: var(--text-primary);
+    padding: 8px 22px;
+    border-radius: 100px;
+    font-weight: 600 !important;
+    font-size: 0.85rem !important;
+    transition: all 0.25s !important;
+  }
+  .nav-cta:hover {
+    background: var(--accent-cyan) !important;
+    color: var(--bg-deep) !important;
+  }
 
-        .hero {
-            margin-bottom: 4rem;
-        }
+  /* === HERO === */
+  .hero {
+    text-align: center;
+    margin-bottom: 100px;
+    animation: fadeUp 0.8s ease-out;
+  }
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0,229,255,0.2);
+    padding: 6px 18px;
+    border-radius: 100px;
+    margin-bottom: 28px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.8rem, 6.5vw, 5rem);
+    font-weight: 900;
+    letter-spacing: -2.5px;
+    line-height: 1.05;
+    margin-bottom: 24px;
+  }
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-magenta) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.7;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 32px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s;
+  }
+  .btn-primary {
+    background: var(--accent-cyan);
+    color: var(--bg-deep);
+  }
+  .btn-primary:hover {
+    background: #33ecff;
+    box-shadow: 0 4px 30px rgba(0,229,255,0.3);
+    transform: translateY(-1px);
+  }
+  .btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover {
+    border-color: var(--text-secondary);
+    background: rgba(255,255,255,0.02);
+  }
 
-        .hero-text {
-            font-size: 1.3rem;
-            margin-bottom: 2rem;
-            line-height: 1.8;
-        }
+  /* === STATS STRIP === */
+  .stats-strip {
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    margin-bottom: 100px;
+    animation: fadeUp 0.8s ease-out 0.15s both;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .stat-label {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
 
-        .shield-concept {
-            background: var(--darker);
-            border: 1px solid var(--dim);
-            padding: 2rem;
-            margin-bottom: 4rem;
-            border-left: 3px solid var(--accent);
-        }
+  /* === SECTION TITLES === */
+  .section-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--accent-magenta);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+  .section-desc {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    max-width: 520px;
+    line-height: 1.7;
+  }
 
-        .shield-concept h2 {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-            font-weight: 300;
-            color: var(--accent);
-        }
+  /* === THE DIFFERENCE — 2 Column === */
+  .difference-section {
+    margin-bottom: 100px;
+    animation: fadeUp 0.8s ease-out 0.2s both;
+  }
+  .difference-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .difference-header .section-desc {
+    margin: 0 auto;
+  }
+  .difference-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .diff-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.35s;
+  }
+  .diff-card:hover {
+    border-color: transparent;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  }
+  .diff-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    padding: 1px;
+    background: linear-gradient(135deg, transparent, transparent);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    transition: background 0.35s;
+    pointer-events: none;
+  }
+  .diff-card:hover::before {
+    background: linear-gradient(135deg, rgba(0,229,255,0.25), rgba(255,45,120,0.15));
+  }
+  .diff-card .icon-wrap {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 24px;
+  }
+  .diff-card .icon-wrap.artist {
+    background: rgba(255,45,120,0.08);
+    border: 1px solid rgba(255,45,120,0.15);
+  }
+  .diff-card .icon-wrap.ai {
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.15);
+  }
+  .diff-card h3 {
+    font-family: var(--font-display);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .diff-card p {
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+  .diff-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .diff-tags span {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 4px 12px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+  .tag-magenta {
+    background: rgba(255,45,120,0.08);
+    color: var(--accent-magenta);
+    border: 1px solid rgba(255,45,120,0.15);
+  }
+  .tag-cyan {
+    background: rgba(0,229,255,0.08);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0,229,255,0.15);
+  }
 
-        .shield-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
-        }
+  /* === HOW IT WORKS === */
+  .how-section {
+    margin-bottom: 100px;
+    animation: fadeUp 0.8s ease-out 0.3s both;
+  }
+  .how-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .how-header .section-desc { margin: 0 auto; }
+  .how-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+  }
+  .how-step {
+    background: var(--bg-card);
+    padding: 36px 24px;
+    text-align: center;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .how-step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .how-step:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+  .how-step:hover { background: var(--bg-card-hover); }
+  .step-num {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+    margin-bottom: 16px;
+    opacity: 0.35;
+  }
+  .step-icon {
+    font-size: 1.6rem;
+    margin-bottom: 14px;
+  }
+  .how-step h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 8px;
+  }
+  .how-step p {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
 
-        .stat {
-            color: var(--dim);
-        }
+  /* === ARTIST SPOTLIGHT === */
+  .spotlight-section {
+    margin-bottom: 100px;
+    animation: fadeUp 0.8s ease-out 0.35s both;
+  }
+  .spotlight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 40px;
+  }
+  .spotlight-header .browse-link {
+    color: var(--accent-cyan);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: opacity 0.2s;
+  }
+  .spotlight-header .browse-link:hover { opacity: 0.7; }
 
-        .stat-value {
-            color: var(--accent);
-            font-size: 1.2rem;
-            display: block;
-            margin-bottom: 0.3rem;
-        }
+  .artist-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .artist-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: all 0.35s;
+    cursor: pointer;
+  }
+  .artist-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    border-color: rgba(0,229,255,0.15);
+  }
+  .artist-preview {
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+  }
+  .artist-preview .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 2px;
+    height: 100%;
+  }
+  .preview-cell {
+    transition: transform 0.4s;
+  }
+  .artist-card:hover .preview-cell { transform: scale(1.05); }
+  .artist-info {
+    padding: 20px;
+  }
+  .artist-name {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+  .artist-style {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-bottom: 12px;
+  }
+  .artist-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .artist-walls {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+  }
+  .artist-badge {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    padding: 3px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+  .badge-featured {
+    background: rgba(255,208,0,0.1);
+    color: var(--accent-gold);
+    border: 1px solid rgba(255,208,0,0.2);
+  }
+  .badge-new {
+    background: rgba(0,229,255,0.08);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(0,229,255,0.15);
+  }
+  .badge-rising {
+    background: rgba(255,45,120,0.08);
+    color: var(--accent-magenta);
+    border: 1px solid rgba(255,45,120,0.15);
+  }
 
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
+  /* === TIERS PREVIEW === */
+  .tiers-section {
+    margin-bottom: 100px;
+    animation: fadeUp 0.8s ease-out 0.4s both;
+  }
+  .tiers-header {
+    text-align: center;
+    margin-bottom: 50px;
+  }
+  .tiers-header .section-desc { margin: 0 auto; }
+  .tiers-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .tier-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    text-align: center;
+    transition: all 0.35s;
+  }
+  .tier-card:hover {
+    border-color: rgba(0,229,255,0.15);
+    transform: translateY(-2px);
+  }
+  .tier-card.highlight {
+    background: linear-gradient(170deg, #0f1a24, #111118 50%, #170f18);
+    border-color: rgba(0,229,255,0.2);
+    box-shadow: 0 0 50px rgba(0,229,255,0.04);
+  }
+  .tier-name {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .tier-price {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 4px;
+  }
+  .tier-price .curr { font-size: 1rem; vertical-align: super; font-weight: 600; }
+  .tier-price .cents { font-size: 1rem; letter-spacing: 0; }
+  .tier-note {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-bottom: 20px;
+  }
+  .tier-perks {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .tier-perks li {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+  }
+  .tier-perks li::before {
+    content: '→ ';
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+  }
+  .tier-cta {
+    display: block;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.88rem;
+    transition: all 0.25s;
+  }
+  .tier-cta.outline {
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    background: transparent;
+  }
+  .tier-cta.outline:hover { border-color: var(--text-secondary); }
+  .tier-cta.fill {
+    background: var(--accent-cyan);
+    color: var(--bg-deep);
+  }
+  .tier-cta.fill:hover { box-shadow: 0 4px 20px rgba(0,229,255,0.3); }
+  .tier-cta.gold {
+    background: linear-gradient(135deg, var(--accent-gold), #ffb800);
+    color: var(--bg-deep);
+  }
+  .tier-cta.gold:hover { box-shadow: 0 4px 20px rgba(255,208,0,0.3); }
+  .tiers-link {
+    text-align: center;
+    margin-top: 24px;
+  }
+  .tiers-link a {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .tiers-link a:hover { color: var(--accent-cyan); }
 
-        .feature {
-            border: 1px solid var(--dim);
-            padding: 2rem;
-            transition: all 0.3s;
-            background: var(--darker);
-        }
+  /* === CTA BANNER === */
+  .cta-banner {
+    text-align: center;
+    padding: 70px 24px;
+    margin-bottom: 60px;
+    border-radius: var(--radius);
+    background: linear-gradient(170deg, #0f1a24 0%, var(--bg-card) 40%, #170f18 100%);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.8s ease-out 0.45s both;
+  }
+  .cta-banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius);
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(255,45,120,0.1));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  .cta-banner h2 {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 14px;
+  }
+  .cta-banner h2 .gradient {
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .cta-banner p {
+    color: var(--text-secondary);
+    font-size: 1.05rem;
+    margin-bottom: 32px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.6;
+  }
 
-        .feature:hover {
-            border-color: var(--accent);
-            box-shadow: 0 0 20px rgba(0, 136, 255, 0.1);
-        }
+  /* === PARTNER STRIP === */
+  .partner-strip {
+    text-align: center;
+    padding: 40px 0;
+    border-top: 1px solid var(--border);
+    margin-bottom: 20px;
+    animation: fadeUp 0.8s ease-out 0.5s both;
+  }
+  .partner-strip .powered-label {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    font-family: var(--font-mono);
+    margin-bottom: 10px;
+  }
+  .partner-logo {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+  }
+  .partner-logo .lambda { color: var(--accent-magenta); font-weight: 800; }
+  .partner-tagline {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    margin-top: 6px;
+  }
 
-        .feature-icon {
-            color: var(--accent);
-            font-size: 1.5rem;
-            margin-bottom: 1rem;
-        }
+  /* === FOOTER === */
+  footer {
+    text-align: center;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    animation: fadeUp 0.8s ease-out 0.55s both;
+  }
+  footer a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  footer a:hover { color: var(--accent-cyan); }
+  .footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 12px;
+  }
 
-        .feature-title {
-            font-size: 1.3rem;
-            margin-bottom: 1rem;
-            color: var(--fg);
-        }
+  /* === ANIMATIONS === */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
-        .feature-desc {
-            color: var(--dim);
-            font-size: 0.95rem;
-        }
-
-        .wall-display {
-            background: var(--darker);
-            border: 1px solid var(--accent);
-            padding: 3rem 2rem;
-            text-align: center;
-            margin-bottom: 4rem;
-        }
-
-        .wall-display h2 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            font-weight: 300;
-        }
-
-        .wall-preview {
-            background: var(--bg);
-            border: 2px solid var(--dim);
-            padding: 4rem 2rem;
-            margin: 2rem auto;
-            max-width: 600px;
-            position: relative;
-        }
-
-        .wall-preview::before {
-            content: "[ your device screen ]";
-            position: absolute;
-            top: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--dim);
-            font-size: 0.8rem;
-        }
-
-        .preview-text {
-            color: var(--dim);
-            font-size: 1.1rem;
-        }
-
-        .cta {
-            text-align: center;
-            margin: 4rem 0;
-        }
-
-        .cta-text {
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .cta-button {
-            display: inline-block;
-            background: transparent;
-            color: var(--accent);
-            border: 2px solid var(--accent);
-            padding: 1rem 3rem;
-            text-decoration: none;
-            font-size: 1.1rem;
-            transition: all 0.3s;
-            font-family: 'Courier New', monospace;
-        }
-
-        .cta-button:hover {
-            background: var(--accent);
-            color: var(--bg);
-            box-shadow: 0 0 30px rgba(0, 136, 255, 0.3);
-        }
-
-        footer {
-            text-align: center;
-            padding: 2rem 0;
-            border-top: 1px solid var(--dim);
-            margin-top: 4rem;
-        }
-
-        .powered {
-            color: var(--dim);
-            font-size: 0.9rem;
-        }
-
-        .powered a {
-            color: var(--fg);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-
-        .powered a:hover {
-            color: var(--accent);
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-            }
-
-            h1 {
-                font-size: 2rem;
-            }
-
-            .hero-text {
-                font-size: 1.1rem;
-            }
-
-            .features {
-                grid-template-columns: 1fr;
-            }
-
-            .shield-stats {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  /* === RESPONSIVE === */
+  @media (max-width: 900px) {
+    .difference-grid, .artist-grid, .tiers-row { grid-template-columns: 1fr; max-width: 480px; margin: 0 auto; }
+    .how-steps { grid-template-columns: 1fr 1fr; border-radius: var(--radius); }
+    .how-step:first-child { border-radius: var(--radius) 0 0 0; }
+    .how-step:nth-child(2) { border-radius: 0 var(--radius) 0 0; }
+    .how-step:nth-child(3) { border-radius: 0 0 0 var(--radius); }
+    .how-step:last-child { border-radius: 0 0 var(--radius) 0; }
+    .stats-strip { gap: 32px; flex-wrap: wrap; }
+    .spotlight-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .nav-links a:not(.nav-cta) { display: none; }
+  }
+  @media (max-width: 480px) {
+    .container { padding: 24px 16px 48px; }
+    nav { margin-bottom: 50px; }
+    .hero { margin-bottom: 60px; }
+    .how-steps { grid-template-columns: 1fr; }
+    .how-step, .how-step:first-child, .how-step:last-child,
+    .how-step:nth-child(2), .how-step:nth-child(3) { border-radius: 0; }
+    .how-steps { border-radius: var(--radius); overflow: hidden; }
+  }
+</style>
 </head>
 <body>
-    <div class="wallpaper-background">
-        <canvas id="wallpaper-canvas"></canvas>
+
+<div class="bg-mesh"></div>
+<div class="bg-mesh-extra"></div>
+<div class="noise-overlay"></div>
+
+<div class="container">
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">ModUrWall</div>
+    <div class="nav-links">
+      <a href="#">Gallery</a>
+      <a href="#">Artists</a>
+      <a href="#">Create</a>
+      <a href="pricing/">Pricing</a>
+      <a href="#" class="nav-cta">Get the App</a>
     </div>
-    
-    <div class="container">
-        <header>
-            <h1>ModUrWall</h1>
-            <p class="tagline">defense through design / AI-generated backgrounds</p>
-        </header>
+  </nav>
 
-        <section class="hero">
-            <p class="hero-text">
-                your device screen is your first line of defense.
-                make it beautiful. make it yours. make it impenetrable.
-                walls that adapt. shields that evolve.
-            </p>
-        </section>
-
-        <section class="shield-concept">
-            <h2>shield philosophy</h2>
-            <p style="color: var(--dim); margin-bottom: 1rem;">
-                a shield doesn't attack—it protects. it must be faster than bullets, 
-                stronger than swords. your background is your digital shield.
-            </p>
-            <div class="shield-stats">
-                <div class="stat">
-                    <span class="stat-value">faster</span>
-                    instant generation
-                </div>
-                <div class="stat">
-                    <span class="stat-value">stronger</span>
-                    unique to you
-                </div>
-                <div class="stat">
-                    <span class="stat-value">adaptive</span>
-                    evolves on demand
-                </div>
-            </div>
-        </section>
-
-        <section class="features">
-            <div class="feature">
-                <div class="feature-icon">◢</div>
-                <h3 class="feature-title">device native</h3>
-                <p class="feature-desc">
-                    generated for your exact screen resolution.
-                    phone, tablet, desktop—perfectly fitted shields.
-                </p>
-            </div>
-
-            <div class="feature">
-                <div class="feature-icon">◣</div>
-                <h3 class="feature-title">AI-crafted</h3>
-                <p class="feature-desc">
-                    describe your vision. receive your wall.
-                    no two backgrounds identical. yours alone.
-                </p>
-            </div>
-
-            <div class="feature">
-                <div class="feature-icon">◥</div>
-                <h3 class="feature-title">instant deploy</h3>
-                <p class="feature-desc">
-                    request → generate → download → set.
-                    your new shield in seconds, not hours.
-                </p>
-            </div>
-        </section>
-
-        <section class="wall-display">
-            <h2>fortify your screen</h2>
-            <div class="wall-preview">
-                <p class="preview-text">
-                    → this space becomes your canvas<br>
-                    → AI renders your defense<br>
-                    → you deploy instantly<br>
-                </p>
-            </div>
-            <p style="color: var(--dim); margin-top: 1rem;">
-                every background generated is a unique artifact.
-                your digital territory, visually defended.
-            </p>
-        </section>
-
-        <section class="cta">
-            <p class="cta-text">ready to build your wall?</p>
-            <a href="#" class="cta-button">generate shield</a>
-        </section>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">Artists + AI · One Platform</div>
+    <h1>
+      Your screen deserves<br>
+      <span class="line2">real art.</span>
+    </h1>
+    <p class="hero-sub">
+      Hand-crafted wallpapers from real artists and AI generation powered by Lempyrλ — all in one app. Better than stock. Made for your screen.
+    </p>
+    <div class="hero-actions">
+      <a href="#" class="btn btn-primary">Browse the Gallery</a>
+      <a href="#" class="btn btn-outline">Start Creating →</a>
     </div>
+  </section>
 
-    <footer>
-        <p class="powered">powered by <a href="https://lempyra.com">Lempyrλ</a></p>
-    </footer>
-    
-    <script>
-        // MODURWALL SQUARE GRID - Pixel Ripple Effect
-        const canvas = document.getElementById('wallpaper-canvas');
-        const ctx = canvas.getContext('2d');
-        
-        let squares = [];
-        const squareSize = 50;
-        const gap = 5;
-        
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            initSquares();
-        }
-        
-        class Square {
-            constructor(x, y, col, row) {
-                this.x = x;
-                this.y = y;
-                this.col = col;
-                this.row = row;
-                this.size = squareSize;
-                this.baseColor = '#0a0e1a'; // Dark blue background
-                this.currentColor = this.baseColor;
-                this.scale = 1;
-                this.brightness = 0;
-            }
-            
-            draw() {
-                ctx.save();
-                ctx.translate(this.x + this.size/2, this.y + this.size/2);
-                ctx.scale(this.scale, this.scale);
-                
-                // Draw square
-                ctx.fillStyle = this.currentColor;
-                ctx.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-                
-                // Border with RGB glow when wave passes
-                const borderColor = this.brightness > 0 ? this.currentColor : '#0088ff';
-                ctx.strokeStyle = borderColor;
-                ctx.lineWidth = this.brightness > 0 ? 2 + this.brightness : 1;
-                
-                // Glow effect when lifted
-                if (this.brightness > 0) {
-                    ctx.shadowBlur = 10 * this.brightness;
-                    ctx.shadowColor = this.currentColor;
-                }
-                
-                ctx.strokeRect(-this.size/2, -this.size/2, this.size, this.size);
-                
-                ctx.restore();
-            }
-        }
-        
-        function initSquares() {
-            squares = [];
-            const cols = Math.ceil(canvas.width / (squareSize + gap));
-            const rows = Math.ceil(canvas.height / (squareSize + gap));
-            
-            for (let row = 0; row < rows; row++) {
-                for (let col = 0; col < cols; col++) {
-                    const x = col * (squareSize + gap);
-                    const y = row * (squareSize + gap);
-                    squares.push(new Square(x, y, col, row));
-                }
-            }
-        }
-        
-        function createRipple(clickX, clickY) {
-            const clickCol = Math.floor(clickX / (squareSize + gap));
-            const clickRow = Math.floor(clickY / (squareSize + gap));
-            
-            // RGB color palette
-            const colorPalette = [
-                '#ff0000', '#00ff00', '#0000ff', 
-                '#ffff00', '#00ffff', '#ff00ff',
-                '#ff8800', '#88ff00', '#0088ff',
-                '#ff0088', '#8800ff', '#00ff88'
-            ];
-            
-            squares.forEach(square => {
-                const distance = Math.sqrt(
-                    Math.pow(square.col - clickCol, 2) + 
-                    Math.pow(square.row - clickRow, 2)
-                );
-                
-                // Each square gets RANDOM color
-                const randomColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-                
-                setTimeout(() => {
-                    // MULTICOLOR WAVE: each square different color
-                    square.currentColor = randomColor;
-                    square.scale = 1.3; // Lift up
-                    square.brightness = 1;
-                    
-                    setTimeout(() => {
-                        // Wave passes
-                        square.currentColor = square.baseColor;
-                        square.scale = 1;
-                        square.brightness = 0;
-                    }, 600);
-                }, distance * 50);
-            });
-        }
-        
-        // AUTO WAVE like Lempyra index
-        function createAutoWave() {
-            const cols = Math.ceil(canvas.width / (squareSize + gap));
-            const rows = Math.ceil(canvas.height / (squareSize + gap));
-            const startCol = Math.floor(Math.random() * cols);
-            const startRow = Math.floor(Math.random() * rows);
-            
-            // Random RGB color for auto wave
-            const colorPalette = [
-                '#ff0000', '#00ff00', '#0000ff', 
-                '#ffff00', '#00ffff', '#ff00ff'
-            ];
-            const waveColor = colorPalette[Math.floor(Math.random() * colorPalette.length)];
-            
-            squares.forEach(square => {
-                const distance = Math.sqrt(
-                    Math.pow(square.col - startCol, 2) + 
-                    Math.pow(square.row - startRow, 2)
-                );
-                
-                setTimeout(() => {
-                    // Subtle auto wave
-                    square.currentColor = waveColor;
-                    square.scale = 1.15; // Smaller lift for auto
-                    square.brightness = 0.6;
-                    
-                    setTimeout(() => {
-                        square.currentColor = square.baseColor;
-                        square.scale = 1;
-                        square.brightness = 0;
-                    }, 600);
-                }, distance * 50);
-            });
-        }
-        
-        function scheduleNextWave() {
-            const interval = 3000 + Math.random() * 4000; // 3-7 seconds
-            setTimeout(() => {
-                createAutoWave();
-                scheduleNextWave();
-            }, interval);
-        }
-        
-        function animate() {
-            ctx.fillStyle = '#0a0e1a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            squares.forEach(square => {
-                square.draw();
-            });
-            
-            requestAnimationFrame(animate);
-        }
-        
-        canvas.addEventListener('click', (e) => {
-            createRipple(e.clientX, e.clientY);
-        });
-        
-        window.addEventListener('resize', resizeCanvas);
-        
-        resizeCanvas();
-        animate();
-        
-        // Start auto wave pulsing like Lempyra
-        scheduleNextWave();
-        createAutoWave(); // Initial wave
-    </script>
+  <!-- STATS -->
+  <div class="stats-strip">
+    <div class="stat">
+      <div class="stat-value">2,400+</div>
+      <div class="stat-label">curated wallpapers</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">180+</div>
+      <div class="stat-label">artists onboard</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">∞</div>
+      <div class="stat-label">AI generations</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">4K+</div>
+      <div class="stat-label">resolution output</div>
+    </div>
+  </div>
+
+  <!-- THE DIFFERENCE -->
+  <section class="difference-section">
+    <div class="difference-header">
+      <div class="section-tag">What makes us different</div>
+      <h2 class="section-title">Two engines. One app.</h2>
+      <p class="section-desc">Other wallpaper apps give you AI slop or recycled stock. ModUrWall combines actual human artists with server-side AI generation — so every wall has soul.</p>
+    </div>
+    <div class="difference-grid">
+      <div class="diff-card">
+        <div class="icon-wrap artist">🎨</div>
+        <h3>Artist Marketplace</h3>
+        <p>Real artists upload curated packs. You browse, download, and support creators directly. Every wallpaper is hand-crafted with intent — not mass-generated garbage.</p>
+        <div class="diff-tags">
+          <span class="tag-magenta">curated packs</span>
+          <span class="tag-magenta">artist royalties</span>
+          <span class="tag-magenta">exclusive drops</span>
+        </div>
+      </div>
+      <div class="diff-card">
+        <div class="icon-wrap ai">⚡</div>
+        <h3>AI Generation Engine</h3>
+        <p>Describe what you see. The Lempyrλ inference cluster renders it in seconds. SDXL, FLUX, and on-device models — from a quick prompt to a 4K wallpaper on your lock screen.</p>
+        <div class="diff-tags">
+          <span class="tag-cyan">prompt-to-wall</span>
+          <span class="tag-cyan">SDXL / FLUX</span>
+          <span class="tag-cyan">on-device free</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="how-header">
+      <div class="section-tag">How it works</div>
+      <h2 class="section-title">From idea to lock screen in four taps</h2>
+      <p class="section-desc">Whether you browse artist work or generate your own — it's always fast.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step">
+        <div class="step-num">01</div>
+        <div class="step-icon">🔍</div>
+        <h4>Browse or Describe</h4>
+        <p>Explore the artist gallery or type a prompt for AI generation</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">02</div>
+        <div class="step-icon">✨</div>
+        <h4>Generate or Select</h4>
+        <p>AI renders your vision, or pick from curated artist packs</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">03</div>
+        <div class="step-icon">📐</div>
+        <h4>Fit Your Screen</h4>
+        <p>Auto-crops to your exact device resolution. Perfect every time</p>
+      </div>
+      <div class="how-step">
+        <div class="step-num">04</div>
+        <div class="step-icon">🛡️</div>
+        <h4>Set & Defend</h4>
+        <p>One tap to apply. Your screen, fortified with art that matters</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARTIST SPOTLIGHT -->
+  <section class="spotlight-section">
+    <div class="spotlight-header">
+      <div>
+        <div class="section-tag">Featured creators</div>
+        <h2 class="section-title">Artist spotlight</h2>
+      </div>
+      <a href="#" class="browse-link">View all artists →</a>
+    </div>
+    <div class="artist-grid">
+      <div class="artist-card">
+        <div class="artist-preview">
+          <div class="preview-grid">
+            <div class="preview-cell" style="background: linear-gradient(135deg, #1a1a2e, #16213e);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #0f3460, #533483);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #e94560, #0f3460);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #533483, #1a1a2e);"></div>
+          </div>
+        </div>
+        <div class="artist-info">
+          <div class="artist-name">Valeria Ramos</div>
+          <div class="artist-style">Abstract geometric · Neon noir</div>
+          <div class="artist-meta">
+            <span class="artist-walls">48 walls</span>
+            <span class="artist-badge badge-featured">FEATURED</span>
+          </div>
+        </div>
+      </div>
+      <div class="artist-card">
+        <div class="artist-preview">
+          <div class="preview-grid">
+            <div class="preview-cell" style="background: linear-gradient(135deg, #0d1b2a, #1b263b);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #415a77, #778da9);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #1b263b, #415a77);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #778da9, #e0e1dd);"></div>
+          </div>
+        </div>
+        <div class="artist-info">
+          <div class="artist-name">Kenzo Takahashi</div>
+          <div class="artist-style">Minimal landscapes · Fog studies</div>
+          <div class="artist-meta">
+            <span class="artist-walls">32 walls</span>
+            <span class="artist-badge badge-new">NEW</span>
+          </div>
+        </div>
+      </div>
+      <div class="artist-card">
+        <div class="artist-preview">
+          <div class="preview-grid">
+            <div class="preview-cell" style="background: linear-gradient(135deg, #2d00f7, #6a00f4);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #8900f2, #a100f2);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #b100e8, #db00b6);"></div>
+            <div class="preview-cell" style="background: linear-gradient(135deg, #e500a4, #f20089);"></div>
+          </div>
+        </div>
+        <div class="artist-info">
+          <div class="artist-name">Amara Osei</div>
+          <div class="artist-style">Chromatic bursts · Afrofuturism</div>
+          <div class="artist-meta">
+            <span class="artist-walls">67 walls</span>
+            <span class="artist-badge badge-rising">RISING</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TIERS PREVIEW -->
+  <section class="tiers-section">
+    <div class="tiers-header">
+      <div class="section-tag">Plans</div>
+      <h2 class="section-title">Start free. Scale when you're ready.</h2>
+      <p class="section-desc">On-device AI is free forever. Unlock the full Lempyrλ engine and artist marketplace when you need more.</p>
+    </div>
+    <div class="tiers-row">
+      <div class="tier-card">
+        <div class="tier-name">Free</div>
+        <div class="tier-price"><span class="curr">$</span>0</div>
+        <div class="tier-note">forever</div>
+        <ul class="tier-perks">
+          <li>On-device AI generation</li>
+          <li>5 generations / day</li>
+          <li>1080p output</li>
+          <li>Community wallpapers</li>
+        </ul>
+        <a href="#" class="tier-cta outline">Get Started</a>
+      </div>
+      <div class="tier-card highlight">
+        <div class="tier-name">Pro</div>
+        <div class="tier-price"><span class="curr">$</span>4<span class="cents">.99</span></div>
+        <div class="tier-note">per month</div>
+        <ul class="tier-perks">
+          <li>Server-side SDXL / FLUX</li>
+          <li>Unlimited generations</li>
+          <li>4K resolution</li>
+          <li>Full artist marketplace</li>
+          <li>Cloud gallery sync</li>
+        </ul>
+        <a href="#" class="tier-cta fill">Start Free Trial</a>
+      </div>
+      <div class="tier-card">
+        <div class="tier-name">Studio</div>
+        <div class="tier-price"><span class="curr">$</span>19<span class="cents">.99</span></div>
+        <div class="tier-note">per month</div>
+        <ul class="tier-perks">
+          <li>Everything in Pro</li>
+          <li>REST API access</li>
+          <li>Batch generation</li>
+          <li>White-label export</li>
+          <li>Team seats (5)</li>
+        </ul>
+        <a href="#" class="tier-cta gold">Contact Sales</a>
+      </div>
+    </div>
+    <div class="tiers-link">
+      <a href="pricing.html">See full comparison →</a>
+    </div>
+  </section>
+
+  <!-- CTA BANNER -->
+  <section class="cta-banner">
+    <h2>Ready to <span class="gradient">mod your wall</span>?</h2>
+    <p>Join the artists and creators already building on ModUrWall. Your screen is a canvas — treat it like one.</p>
+    <div class="hero-actions">
+      <a href="#" class="btn btn-primary">Download the App</a>
+      <a href="#" class="btn btn-outline">Apply as an Artist →</a>
+    </div>
+  </section>
+
+  <!-- PARTNER -->
+  <div class="partner-strip">
+    <div class="powered-label">Infrastructure by</div>
+    <div class="partner-logo">Lempyr<span class="lambda">λ</span></div>
+    <div class="partner-tagline">Quantum-secured IaaS · Ollama-native inference · Honduras 🇭🇳</div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-links">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">API Docs</a>
+      <a href="#">Artist Program</a>
+      <a href="https://github.com/modurwall">GitHub</a>
+    </div>
+    <p>© 2025 ModUrWall · Powered by <a href="https://lempyra.com">Lempyrλ</a></p>
+  </footer>
+
+</div>
+
 </body>
 </html>
