@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://sar1a.lempyra.com; font-src 'self' https://fonts.gstatic.com; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;">
+<title>ModUrWall — Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=Space+Mono:wght@400;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0f; --bg-card:#111118; --bg-hover:#16161f;
+  --border:#1e1e2e; --cyan:#00e5ff; --magenta:#ff2d78; --gold:#ffd000;
+  --text:#eaeaf0; --text2:#7a7a8e; --text3:#4a4a5e;
+  --r:12px; --r-sm:8px; --sidebar:230px;
+  --font-d:'Outfit',sans-serif; --font-b:'DM Sans',sans-serif; --font-m:'Space Mono',monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);min-height:100vh;display:flex;overflow:hidden;-webkit-font-smoothing:antialiased;}
+.bg-mesh{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.bg-mesh::before{content:'';position:absolute;width:600px;height:600px;top:-150px;left:calc(var(--sidebar));background:radial-gradient(circle,rgba(0,229,255,0.05) 0%,transparent 60%);animation:d1 22s ease-in-out infinite;}
+.bg-mesh::after{content:'';position:absolute;width:500px;height:500px;bottom:-100px;right:-80px;background:radial-gradient(circle,rgba(255,45,120,0.04) 0%,transparent 60%);animation:d2 28s ease-in-out infinite;}
+@keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(60px,40px)}}
+@keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,-30px)}}
+.noise{position:fixed;inset:0;z-index:1;opacity:0.018;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sidebar);background:rgba(10,10,15,0.97);border-right:1px solid var(--border);z-index:50;display:flex;flex-direction:column;padding:24px 0;}
+.sb-brand{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.sb-logo{font-family:var(--font-d);font-weight:900;font-size:1.25rem;letter-spacing:-0.5px;background:linear-gradient(135deg,var(--cyan),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px;}
+.sb-user{font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.5px;color:var(--text3);}
+.sb-nav{flex:1;padding:0 10px;display:flex;flex-direction:column;gap:2px;}
+.sb-label{font-family:var(--font-m);font-size:0.5rem;letter-spacing:3px;text-transform:uppercase;color:var(--text3);padding:10px 10px 4px;}
+.sb-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;transition:all 0.2s;font-size:0.88rem;font-weight:500;color:var(--text2);border:none;background:transparent;width:100%;text-align:left;text-decoration:none;}
+.sb-item:hover{background:rgba(255,255,255,0.04);color:var(--text);}
+.sb-item.active{background:rgba(0,229,255,0.08);color:var(--cyan);}
+.sb-item .ico{font-size:1rem;flex-shrink:0;opacity:0.8;}
+.sb-item.danger:hover{background:rgba(255,45,120,0.06);color:var(--magenta);}
+.sb-footer{padding:16px 20px 0;border-top:1px solid var(--border);}
+.sb-footer-txt{font-family:var(--font-m);font-size:0.52rem;color:var(--text3);letter-spacing:0.5px;}
+.sb-footer-txt span{color:var(--magenta);}
+
+/* MAIN */
+.main{margin-left:var(--sidebar);flex:1;overflow-y:auto;height:100vh;position:relative;z-index:10;}
+.view{display:none;padding:36px 40px 60px;animation:fadeUp 0.3s ease-out;}
+.view.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.view-header{margin-bottom:32px;}
+.view-tag{font-family:var(--font-m);font-size:0.65rem;color:var(--magenta);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;}
+.view-title{font-family:var(--font-d);font-size:2rem;font-weight:800;letter-spacing:-1px;margin-bottom:6px;}
+.view-sub{color:var(--text2);font-size:0.9rem;}
+
+/* GENERATE */
+.gen-layout{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;}
+.prompt-label{font-size:0.8rem;font-weight:600;color:var(--text2);margin-bottom:8px;}
+.prompt-box{width:100%;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font-b);font-size:0.95rem;padding:16px;resize:vertical;min-height:110px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;margin-bottom:18px;}
+.prompt-box:focus{border-color:rgba(0,229,255,0.4);box-shadow:0 0 0 3px rgba(0,229,255,0.05);}
+.prompt-box::placeholder{color:var(--text3);}
+.chips-label{font-size:0.75rem;font-weight:600;color:var(--text2);margin-bottom:8px;}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px;}
+.chip{font-family:var(--font-m);font-size:0.62rem;letter-spacing:0.5px;padding:6px 14px;border-radius:100px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;}
+.chip:hover{border-color:var(--cyan);color:var(--cyan);}
+.chip.sel{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+.chip.mood:hover{border-color:var(--magenta);color:var(--magenta);}
+.chip.mood.sel{background:rgba(255,45,120,0.1);border-color:var(--magenta);color:var(--magenta);}
+.ratio-row{display:flex;gap:8px;margin-bottom:22px;}
+.ratio-btn{flex:1;padding:10px 6px;border-radius:var(--r-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.ratio-btn:hover{border-color:var(--text2);color:var(--text);}
+.ratio-btn.sel{border-color:var(--cyan);background:rgba(0,229,255,0.06);color:var(--cyan);}
+.ratio-icon{border:2px solid currentColor;border-radius:2px;display:block;}
+.ratio-lbl{font-family:var(--font-m);font-size:0.52rem;letter-spacing:0.3px;}
+#gen-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--cyan),#00bbdd);color:var(--bg);border:none;border-radius:var(--r);font-family:var(--font-d);font-weight:800;font-size:1rem;cursor:pointer;transition:all 0.25s;}
+#gen-btn:hover:not(:disabled){box-shadow:0 4px 28px rgba(0,229,255,0.3);transform:translateY(-1px);}
+#gen-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+#gen-btn.loading{background:linear-gradient(135deg,#004455,#002233);color:var(--cyan);animation:pb 1.4s ease-in-out infinite;}
+@keyframes pb{0%,100%{opacity:0.6}50%{opacity:1}}
+
+/* RESULT */
+.result-panel{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;position:sticky;top:36px;}
+.result-display{width:100%;aspect-ratio:9/16;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:linear-gradient(170deg,#0d0d1a,#111118);}
+.result-ph{display:flex;flex-direction:column;align-items:center;gap:10px;opacity:0.2;}
+.result-ph .phi{font-size:2.5rem;}
+.result-ph .pht{font-family:var(--font-m);font-size:0.6rem;letter-spacing:1px;color:var(--text2);}
+#rcanvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none;}
+.result-meta{padding:16px 18px;}
+.rmeta-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.rmeta-k{font-family:var(--font-m);font-size:0.58rem;letter-spacing:0.5px;color:var(--text3);}
+.rmeta-v{font-family:var(--font-m);font-size:0.6rem;color:var(--text2);}
+.result-actions{display:flex;gap:8px;margin-top:14px;}
+.btn-sm{flex:1;padding:9px;border-radius:var(--r-sm);font-family:var(--font-d);font-weight:600;font-size:0.78rem;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;}
+.btn-sm:hover:not(:disabled){border-color:var(--text2);color:var(--text);}
+.btn-sm.primary{background:var(--cyan);color:var(--bg);border-color:var(--cyan);}
+.btn-sm.primary:hover:not(:disabled){box-shadow:0 2px 14px rgba(0,229,255,0.3);}
+.btn-sm:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* GALLERY */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px;}
+.fc{font-family:var(--font-m);font-size:0.62rem;letter-spacing:0.5px;padding:6px 16px;border-radius:100px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all 0.2s;}
+.fc:hover{border-color:var(--text2);color:var(--text);}
+.fc.sel{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+.wall-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;}
+.wcard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:all 0.3s;position:relative;}
+.wcard:hover{border-color:rgba(0,229,255,0.2);transform:translateY(-3px);box-shadow:0 8px 30px rgba(0,0,0,0.5);}
+.wthumb{width:100%;aspect-ratio:9/16;display:block;}
+.winfo{padding:12px 14px;}
+.wname{font-family:var(--font-d);font-weight:600;font-size:0.82rem;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wartist{font-size:0.72rem;color:var(--text2);margin-bottom:8px;}
+.wtags{display:flex;gap:5px;flex-wrap:wrap;}
+.wtag{font-family:var(--font-m);font-size:0.55rem;padding:3px 8px;border-radius:100px;background:rgba(255,255,255,0.04);color:var(--text2);border:1px solid var(--border);}
+.woverlay{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,15,0.9) 0%,transparent 55%);opacity:0;transition:opacity 0.3s;display:flex;align-items:flex-end;padding:12px;}
+.wcard:hover .woverlay{opacity:1;}
+.wdl{width:100%;padding:8px;border-radius:var(--r-sm);background:var(--cyan);color:var(--bg);border:none;font-family:var(--font-d);font-weight:700;font-size:0.78rem;cursor:pointer;}
+
+/* ARTISTS */
+.artist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.acard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:all 0.3s;}
+.acard:hover{border-color:rgba(0,229,255,0.15);transform:translateY(-3px);box-shadow:0 10px 35px rgba(0,0,0,0.4);}
+.abanner{height:120px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;}
+.acell{overflow:hidden;transition:transform 0.4s;}
+.acard:hover .acell{transform:scale(1.05);}
+.ainfo{padding:18px 20px;}
+.aname{font-family:var(--font-d);font-weight:700;font-size:1rem;margin-bottom:3px;}
+.astyle{color:var(--text2);font-size:0.78rem;margin-bottom:12px;}
+.ameta{display:flex;justify-content:space-between;align-items:center;}
+.awalls{font-family:var(--font-m);font-size:0.65rem;color:var(--text2);}
+.badge{font-family:var(--font-m);font-size:0.55rem;padding:3px 9px;border-radius:100px;letter-spacing:0.5px;}
+.bg{background:rgba(255,208,0,0.1);color:var(--gold);border:1px solid rgba(255,208,0,0.2);}
+.bc{background:rgba(0,229,255,0.08);color:var(--cyan);border:1px solid rgba(0,229,255,0.15);}
+.bm{background:rgba(255,45,120,0.08);color:var(--magenta);border:1px solid rgba(255,45,120,0.15);}
+
+/* MY WALLS empty */
+.empty{text-align:center;padding:80px 20px;opacity:0.35;}
+.empty-ico{font-size:3rem;margin-bottom:16px;}
+.empty-txt{font-family:var(--font-m);font-size:0.72rem;letter-spacing:1px;color:var(--text2);}
+
+/* RESPONSIVE */
+@media(max-width:1100px){.gen-layout{grid-template-columns:1fr;}.result-panel{position:static;}.result-display{aspect-ratio:16/9;}}
+@media(max-width:800px){:root{--sidebar:60px;}.sb-brand,.sb-label,.sb-item>span:not(.ico),.sb-footer-txt,.sb-user{display:none;}.sb-item{justify-content:center;padding:14px 0;}.view{padding:20px 16px 40px;}}
+@media(max-width:520px){.wall-grid{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+<div class="bg-mesh"></div>
+<div class="noise"></div>
+
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">ModUrWall</div>
+    <div class="sb-user" id="sb-user">studio</div>
+  </div>
+  <nav class="sb-nav">
+    <div class="sb-label">Studio</div>
+    <button class="sb-item active" onclick="go('generate',this)"><span class="ico">✨</span><span>Generate</span></button>
+    <button class="sb-item" onclick="go('gallery',this)"><span class="ico">🖼</span><span>Gallery</span></button>
+    <button class="sb-item" onclick="go('artists',this)"><span class="ico">🎨</span><span>Artists</span></button>
+    <button class="sb-item" onclick="go('mywalls',this)"><span class="ico">💾</span><span>My Walls</span></button>
+    <div class="sb-label" style="margin-top:8px;">Account</div>
+    <a href="../" class="sb-item"><span class="ico">◎</span><span>Home</span></a>
+    <button class="sb-item danger" id="logout-btn"><span class="ico">⊗</span><span>Logout</span></button>
+  </nav>
+  <div class="sb-footer"><div class="sb-footer-txt">Lempyr<span>λ</span> Engine</div></div>
+</aside>
+
+<main class="main">
+
+  <!-- GENERATE -->
+  <div class="view active" id="view-generate">
+    <div class="view-header">
+      <div class="view-tag">AI Generation Engine</div>
+      <h1 class="view-title">Generate Your Wall</h1>
+      <p class="view-sub">Describe what you see. Lempyrλ renders it in seconds.</p>
+    </div>
+    <div class="gen-layout">
+      <div>
+        <div class="prompt-label">Describe your wallpaper</div>
+        <textarea class="prompt-box" id="prompt-box" placeholder="e.g. Neon-lit cityscape at 3am, rain on glass, cyberpunk atmosphere, ultra detailed..."></textarea>
+        <div class="chips-label">Style</div>
+        <div class="chips" id="style-chips">
+          <button class="chip sel" data-v="photorealistic">Photorealistic</button>
+          <button class="chip" data-v="abstract">Abstract</button>
+          <button class="chip" data-v="anime">Anime</button>
+          <button class="chip" data-v="minimal">Minimal</button>
+          <button class="chip" data-v="cyberpunk">Cyberpunk</button>
+          <button class="chip" data-v="organic">Organic</button>
+          <button class="chip" data-v="neon-noir">Neon Noir</button>
+          <button class="chip" data-v="geometric">Geometric</button>
+        </div>
+        <div class="chips-label">Mood</div>
+        <div class="chips" id="mood-chips">
+          <button class="chip mood sel" data-v="dark">Dark</button>
+          <button class="chip mood" data-v="bright">Bright</button>
+          <button class="chip mood" data-v="moody">Moody</button>
+          <button class="chip mood" data-v="ethereal">Ethereal</button>
+          <button class="chip mood" data-v="energetic">Energetic</button>
+          <button class="chip mood" data-v="calm">Calm</button>
+        </div>
+        <div class="chips-label">Aspect Ratio</div>
+        <div class="ratio-row">
+          <button class="ratio-btn sel" data-ratio="9:16" data-w="1080" data-h="1920">
+            <span class="ratio-icon" style="width:18px;height:28px;"></span><span class="ratio-lbl">9:16 Portrait</span>
+          </button>
+          <button class="ratio-btn" data-ratio="1:1" data-w="1080" data-h="1080">
+            <span class="ratio-icon" style="width:24px;height:24px;"></span><span class="ratio-lbl">1:1 Square</span>
+          </button>
+          <button class="ratio-btn" data-ratio="16:9" data-w="1920" data-h="1080">
+            <span class="ratio-icon" style="width:30px;height:18px;"></span><span class="ratio-lbl">16:9 Landscape</span>
+          </button>
+        </div>
+        <button id="gen-btn" onclick="generate()">✨ Generate Wallpaper</button>
+      </div>
+
+      <div class="result-panel">
+        <div class="result-display" id="result-display">
+          <canvas id="rcanvas"></canvas>
+          <div class="result-ph" id="result-ph"><div class="phi">🖼</div><div class="pht">your wallpaper appears here</div></div>
+        </div>
+        <div class="result-meta">
+          <div class="rmeta-row"><span class="rmeta-k">RESOLUTION</span><span class="rmeta-v" id="r-res">— × —</span></div>
+          <div class="rmeta-row"><span class="rmeta-k">STYLE</span><span class="rmeta-v" id="r-style">—</span></div>
+          <div class="rmeta-row"><span class="rmeta-k">GENERATION ID</span><span class="rmeta-v" id="r-id">—</span></div>
+          <div class="result-actions">
+            <button class="btn-sm" id="save-btn" disabled onclick="saveWall()">Save</button>
+            <button class="btn-sm primary" id="dl-btn" disabled onclick="downloadWall()">↓ Download</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GALLERY -->
+  <div class="view" id="view-gallery">
+    <div class="view-header">
+      <div class="view-tag">Curated Marketplace</div>
+      <h1 class="view-title">Gallery</h1>
+      <p class="view-sub">Hand-crafted wallpapers from real artists. Every wall has soul.</p>
+    </div>
+    <div class="filter-bar" id="filter-bar"></div>
+    <div class="wall-grid" id="wall-grid"></div>
+  </div>
+
+  <!-- ARTISTS -->
+  <div class="view" id="view-artists">
+    <div class="view-header">
+      <div class="view-tag">Featured Creators</div>
+      <h1 class="view-title">Artists</h1>
+      <p class="view-sub">Real artists. Exclusive packs. Support creators directly.</p>
+    </div>
+    <div class="artist-grid" id="artist-grid"></div>
+  </div>
+
+  <!-- MY WALLS -->
+  <div class="view" id="view-mywalls">
+    <div class="view-header">
+      <div class="view-tag">Your Collection</div>
+      <h1 class="view-title">My Walls</h1>
+      <p class="view-sub">Wallpapers you've generated and saved this session.</p>
+    </div>
+    <div class="wall-grid" id="my-grid"></div>
+    <div class="empty" id="my-empty"><div class="empty-ico">💾</div><div class="empty-txt">No walls saved yet — generate one and hit Save</div></div>
+  </div>
+
+</main>
+<script>
+// AUTH
+if (!sessionStorage.getItem('modurwall_token')) { window.location.replace('../login/'); }
+document.getElementById('sb-user').textContent = sessionStorage.getItem('modurwall_user') || 'artist';
+document.getElementById('logout-btn').onclick = function() {
+  ['modurwall_token','modurwall_refresh','modurwall_user'].forEach(function(k){ sessionStorage.removeItem(k); });
+  window.location.replace('../login/');
+};
+
+// API (wired — backend pending per CLAUDE.md)
+var API = {
+  base: 'https://sar1a.lempyra.com',
+  generate: '/modurwall/generate'  // POST — ready when Lempyrλ backend is live
+};
+
+// VIEWS
+function go(id, el) {
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('active'); });
+  document.querySelectorAll('.sb-item').forEach(function(s){ s.classList.remove('active'); });
+  document.getElementById('view-'+id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// CHIPS
+function pickOne(groupSel, clicked, extraCls) {
+  document.querySelectorAll(groupSel).forEach(function(c){ c.classList.remove('sel'); });
+  clicked.classList.add('sel');
+}
+document.querySelectorAll('#style-chips .chip').forEach(function(c){
+  c.onclick = function(){ pickOne('#style-chips .chip', c); };
+});
+document.querySelectorAll('#mood-chips .chip').forEach(function(c){
+  c.onclick = function(){ pickOne('#mood-chips .chip', c); };
+});
+document.querySelectorAll('.ratio-btn').forEach(function(b){
+  b.onclick = function(){
+    document.querySelectorAll('.ratio-btn').forEach(function(r){ r.classList.remove('sel'); });
+    b.classList.add('sel');
+    var p = b.dataset.ratio.split(':');
+    document.getElementById('result-display').style.aspectRatio = p[0]+'/'+p[1];
+  };
+});
+
+// GENERATE
+var saved = [], lastCv = null;
+var PALETTES = {
+  'photorealistic':[['#0a1628','#1a3a5c','#2d6a9f'],['#0d1a0d','#1a3d1a','#2d7a2d']],
+  'abstract':      [['#2d00f7','#6a00f4','#f20089'],['#f72585','#7209b7','#3a0ca3']],
+  'anime':         [['#ff6b9d','#c44569','#f8a5c2'],['#a29bfe','#6c5ce7','#fd79a8']],
+  'minimal':       [['#1a1a2e','#16213e','#0f3460'],['#141414','#222222','#333333']],
+  'cyberpunk':     [['#00e5ff','#0a0a0f','#ff00ff'],['#ff2d78','#050505','#00e5ff']],
+  'organic':       [['#1a4d2e','#4a7c59','#80b192'],['#5c4033','#8d6e63','#bcaaa4']],
+  'neon-noir':     [['#0d0d1a','#1a0033','#cc00ff'],['#0a0a0f','#003333','#00ffff']],
+  'geometric':     [['#0f0c29','#302b63','#24243e'],['#1c1c2e','#2e2e4d','#4d4d80']]
+};
+
+function getSel() {
+  var style = (document.querySelector('#style-chips .chip.sel')||{}).dataset.v || 'photorealistic';
+  var mood  = (document.querySelector('#mood-chips .chip.sel') ||{}).dataset.v || 'dark';
+  var rb    = document.querySelector('.ratio-btn.sel');
+  return { prompt: document.getElementById('prompt-box').value.trim(),
+    style:style, mood:mood,
+    ratio:rb?rb.dataset.ratio:'9:16', w:rb?+rb.dataset.w:1080, h:rb?+rb.dataset.h:1920 };
+}
+
+function generate() {
+  var sel = getSel();
+  if (!sel.prompt) {
+    var pb = document.getElementById('prompt-box');
+    pb.style.borderColor='rgba(255,45,120,0.5)';
+    pb.focus();
+    setTimeout(function(){ pb.style.borderColor=''; }, 1500);
+    return;
+  }
+  var btn = document.getElementById('gen-btn');
+  btn.disabled=true; btn.classList.add('loading'); btn.textContent='⟳ Rendering...';
+  document.getElementById('save-btn').disabled=true;
+  document.getElementById('dl-btn').disabled=true;
+
+  // ── When backend is live, replace mock block with: ─────────────────────────
+  // var token = sessionStorage.getItem('modurwall_token');
+  // fetch(API.base + API.generate, {
+  //   method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+  //   body:JSON.stringify({prompt:sel.prompt,width:sel.w,height:sel.h,style:sel.style,mood:sel.mood})
+  // }).then(function(r){ return r.json(); }).then(function(d){ showImage(d.image_url,sel); });
+  // ──────────────────────────────────────────────────────────────────────────
+
+  setTimeout(function(){ mockRender(sel); resetBtn(btn); }, 2200);
+}
+
+function resetBtn(btn) {
+  btn.disabled=false; btn.classList.remove('loading'); btn.textContent='✨ Generate Wallpaper';
+  document.getElementById('save-btn').disabled=false;
+  document.getElementById('dl-btn').disabled=false;
+}
+
+function mockRender(sel) {
+  var cv = document.getElementById('rcanvas');
+  var disp = document.getElementById('result-display');
+  cv.width = disp.offsetWidth; cv.height = disp.offsetHeight;
+  var ctx = cv.getContext('2d');
+  var pals = PALETTES[sel.style] || PALETTES.minimal;
+  var pal  = pals[Math.floor(Math.random()*pals.length)];
+  var g = ctx.createLinearGradient(0,0,cv.width,cv.height);
+  g.addColorStop(0,pal[0]); g.addColorStop(0.5,pal[1]); g.addColorStop(1,pal[2]);
+  ctx.fillStyle=g; ctx.fillRect(0,0,cv.width,cv.height);
+  var rg = ctx.createRadialGradient(cv.width*0.3,cv.height*0.25,0,cv.width*0.3,cv.height*0.25,cv.width*0.7);
+  rg.addColorStop(0,'rgba(255,255,255,0.07)'); rg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=rg; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.globalAlpha=0.04;
+  for(var i=0;i<700;i++){
+    ctx.fillStyle=Math.random()>0.5?'#ffffff':pal[2];
+    ctx.beginPath(); ctx.arc(Math.random()*cv.width,Math.random()*cv.height,Math.random()*1.5+0.3,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  document.getElementById('result-ph').style.display='none';
+  cv.style.display='block'; lastCv=cv;
+  document.getElementById('r-res').textContent  = sel.w+' × '+sel.h;
+  document.getElementById('r-style').textContent = sel.style+' · '+sel.mood;
+  document.getElementById('r-id').textContent   = 'muw-'+Math.random().toString(36).substr(2,8);
+}
+
+function saveWall() {
+  if (!lastCv) return;
+  var sel = getSel();
+  saved.push({ url:lastCv.toDataURL('image/jpeg',0.92), name:sel.style+' · '+sel.mood, id:document.getElementById('r-id').textContent });
+  renderMyWalls();
+  var b=document.getElementById('save-btn'); b.textContent='✓ Saved'; b.disabled=true;
+  setTimeout(function(){ b.textContent='Save'; b.disabled=false; }, 2000);
+}
+
+function downloadWall() {
+  if (!lastCv) return;
+  var a=document.createElement('a');
+  a.href=lastCv.toDataURL('image/jpeg',0.95);
+  a.download='modurwall-'+document.getElementById('r-id').textContent+'.jpg';
+  a.click();
+}
+
+function renderMyWalls() {
+  var grid=document.getElementById('my-grid'), empty=document.getElementById('my-empty');
+  if (!saved.length){ empty.style.display=''; grid.innerHTML=''; return; }
+  empty.style.display='none';
+  grid.innerHTML=saved.map(function(w){
+    return '<div class="wcard"><img class="wthumb" src="'+w.url+'" style="aspect-ratio:unset;object-fit:cover;" alt="">'+
+      '<div class="winfo"><div class="wname">'+w.name+'</div>'+
+      '<div class="wartist" style="font-family:var(--font-m);font-size:0.58rem;">'+w.id+'</div></div></div>';
+  }).join('');
+}
+
+// GALLERY DATA
+var GALLERY = [
+  {name:'Neon City Rain',   artist:'Valeria Ramos',   style:'cyberpunk',  tags:['neon','dark'],    g:['#0a0f1e','#0f2d4a','#00e5ff']},
+  {name:'Void Bloom',       artist:'Amara Osei',      style:'abstract',   tags:['magenta','fluid'], g:['#1a0033','#6a00f4','#ff2d78']},
+  {name:'Fogline',          artist:'Kenzo Takahashi', style:'minimal',    tags:['mono','calm'],    g:['#0d1b2a','#1b263b','#415a77']},
+  {name:'Chromatic Burst',  artist:'Amara Osei',      style:'abstract',   tags:['color','energy'], g:['#2d00f7','#a100f2','#f20089']},
+  {name:'Ember Field',      artist:'Lena Voss',       style:'organic',    tags:['warm','earth'],   g:['#1a0a00','#5c3a1e','#c47a3a']},
+  {name:'Grid Construct',   artist:'Jin Park',         style:'geometric',  tags:['sharp','dark'],   g:['#0a0a14','#1a1a30','#2d2d5a']},
+  {name:'Deep Forest',      artist:'Kenzo Takahashi', style:'organic',    tags:['green','dark'],   g:['#020d02','#0d2b0d','#1a5c1a']},
+  {name:'Sakura Drift',     artist:'Yuki Mori',       style:'anime',      tags:['pink','soft'],    g:['#2d0a1e','#7a2d5c','#ff8cb4']},
+  {name:'Ultraviolet',      artist:'Valeria Ramos',   style:'neon-noir',  tags:['uv','deep'],      g:['#080012','#1a0040','#7700ff']},
+  {name:'Arctic Signal',    artist:'Jin Park',         style:'minimal',    tags:['cold','blue'],    g:['#0a1a2a','#1a3a5a','#4a8ab4']},
+  {name:'Horizon Zero',     artist:'Lena Voss',       style:'geometric',  tags:['gold','warm'],    g:['#1a0a00','#3a1a00','#ffd000']},
+  {name:'Cascade',          artist:'Yuki Mori',       style:'abstract',   tags:['flow','blue'],    g:['#000d1a','#002d5c','#0088cc']},
+];
+var FILTERS=['All','cyberpunk','abstract','minimal','organic','geometric','anime','neon-noir'];
+var activeF='All';
+
+function buildGallery() {
+  document.getElementById('filter-bar').innerHTML = FILTERS.map(function(f){
+    return '<button class="fc'+(f==='All'?' sel':'')+ '" onclick="filterGal(\''+f+'\',this)">'+f.charAt(0).toUpperCase()+f.slice(1)+'</button>';
+  }).join('');
+  renderGallery();
+}
+function filterGal(f,el) {
+  activeF=f;
+  document.querySelectorAll('.fc').forEach(function(c){ c.classList.remove('sel'); });
+  el.classList.add('sel');
+  renderGallery();
+}
+function renderGallery() {
+  var items = activeF==='All' ? GALLERY : GALLERY.filter(function(w){ return w.style===activeF; });
+  document.getElementById('wall-grid').innerHTML = items.map(function(w){
+    var grad='linear-gradient(160deg,'+w.g[0]+','+w.g[1]+' 50%,'+w.g[2]+')';
+    var tags=w.tags.map(function(t){ return '<span class="wtag">'+t+'</span>'; }).join('');
+    return '<div class="wcard"><div class="wthumb" style="background:'+grad+';"></div>'+
+      '<div class="woverlay"><button class="wdl">↓ Download</button></div>'+
+      '<div class="winfo"><div class="wname">'+w.name+'</div>'+
+      '<div class="wartist">'+w.artist+'</div>'+
+      '<div class="wtags">'+tags+'</div></div></div>';
+  }).join('');
+}
+
+// ARTISTS DATA
+var ARTISTS = [
+  {name:'Valeria Ramos',   style:'Abstract geometric · Neon noir',   walls:48, badge:'FEATURED', bc:'bg',
+   cells:['linear-gradient(135deg,#1a1a2e,#16213e)','linear-gradient(135deg,#0f3460,#533483)','linear-gradient(135deg,#e94560,#0f3460)','linear-gradient(135deg,#533483,#1a1a2e)']},
+  {name:'Kenzo Takahashi', style:'Minimal landscapes · Fog studies',  walls:32, badge:'NEW',      bc:'bc',
+   cells:['linear-gradient(135deg,#0d1b2a,#1b263b)','linear-gradient(135deg,#415a77,#778da9)','linear-gradient(135deg,#1b263b,#415a77)','linear-gradient(135deg,#778da9,#e0e1dd)']},
+  {name:'Amara Osei',      style:'Chromatic bursts · Afrofuturism',   walls:67, badge:'RISING',   bc:'bm',
+   cells:['linear-gradient(135deg,#2d00f7,#6a00f4)','linear-gradient(135deg,#8900f2,#a100f2)','linear-gradient(135deg,#b100e8,#db00b6)','linear-gradient(135deg,#e500a4,#f20089)']},
+  {name:'Yuki Mori',       style:'Anime aesthetics · Soft surrealism', walls:29, badge:'NEW',     bc:'bc',
+   cells:['linear-gradient(135deg,#ff6b9d,#c44569)','linear-gradient(135deg,#f8a5c2,#ff6b9d)','linear-gradient(135deg,#c44569,#a0274d)','linear-gradient(135deg,#ffd9e8,#f8a5c2)']},
+  {name:'Jin Park',        style:'Geometric · Brutalist minimal',      walls:41, badge:'FEATURED', bc:'bg',
+   cells:['linear-gradient(135deg,#0a0a14,#1a1a30)','linear-gradient(135deg,#1a1a30,#2d2d5a)','linear-gradient(135deg,#2d2d5a,#4d4d80)','linear-gradient(135deg,#0a0a14,#2d2d5a)']},
+  {name:'Lena Voss',       style:'Organic textures · Nature studies',  walls:55, badge:'RISING',   bc:'bm',
+   cells:['linear-gradient(135deg,#1a0a00,#3a1e00)','linear-gradient(135deg,#5c3a1e,#8a5a30)','linear-gradient(135deg,#3a1e00,#6b3e1e)','linear-gradient(135deg,#c47a3a,#e8a05a)']},
+];
+function buildArtists() {
+  document.getElementById('artist-grid').innerHTML = ARTISTS.map(function(a){
+    return '<div class="acard"><div class="abanner">'+a.cells.map(function(c){
+      return '<div class="acell" style="background:'+c+';"></div>';
+    }).join('')+'</div><div class="ainfo"><div class="aname">'+a.name+'</div>'+
+    '<div class="astyle">'+a.style+'</div><div class="ameta">'+
+    '<span class="awalls">'+a.walls+' walls</span>'+
+    '<span class="badge '+a.bc+'">'+a.badge+'</span></div></div></div>';
+  }).join('');
+}
+
+buildGallery(); buildArtists(); renderMyWalls();
+</script>
+</body>
+</html>
